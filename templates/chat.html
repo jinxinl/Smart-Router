@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Router Chat</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #fafafa;
+            color: #2c2c2c;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 280px;
+            background: #ffffff;
+            border-right: 1px solid #e1e5e9;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c2c2c;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .nav-link {
+            flex: 1;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            color: #2c2c2c;
+            text-decoration: none;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .nav-link:hover {
+            background: #e6edf3;
+            border-color: #b0b7c3;
+            color: #0969da;
+        }
+
+        .nav-link.active {
+            background: #0969da;
+            border-color: #0969da;
+            color: white;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            color: #2c2c2c;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .new-chat-btn:hover {
+            background: #e6edf3;
+            border-color: #b0b7c3;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversation-item {
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .conversation-item:hover {
+            background: #f6f8fa;
+        }
+
+        .conversation-item.active {
+            background: #e6f3ff;
+            border-color: #0969da;
+        }
+
+        .conversation-title {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-time {
+            font-size: 12px;
+            color: #656d76;
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #da3633;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .conversation-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        /* 主聊天区 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e1e5e9;
+            background: #ffffff;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2328;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 24px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .message-user .message-content {
+            background: #0969da;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .message-ai {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .message-ai .message-content {
+            background: #ffffff;
+            color: #1f2328;
+            padding: 16px 20px;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.6;
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .routing-info {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #f6f8fa;
+            border-radius: 8px;
+            border-left: 3px solid #0969da;
+            font-size: 13px;
+            max-width: 85%;
+            border: 1px solid #e1e5e9;
+        }
+
+        .routing-info h4 {
+            color: #0969da;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .routing-detail {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            color: #656d76;
+        }
+
+        .routing-detail strong {
+            color: #1f2328;
+            font-weight: 600;
+        }
+
+        /* 输入区 */
+        .input-area {
+            padding: 24px;
+            border-top: 1px solid #e1e5e9;
+            background: #ffffff;
+        }
+
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 16px 60px 16px 20px;
+            background: #ffffff;
+            border: 1px solid #d0d7de;
+            border-radius: 12px;
+            color: #1f2328;
+            font-size: 16px;
+            resize: none;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+
+        .message-input:focus {
+            border-color: #0969da;
+            box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0969da;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #0860ca;
+        }
+
+        .send-btn:disabled {
+            background: #8c959f;
+            cursor: not-allowed;
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #656d76;
+            font-style: italic;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #656d76;
+            animation: pulse 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        .loading-dot:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #656d76;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #8c959f;
+        }
+
+        .empty-state h3 {
+            color: #1f2328;
+            margin-bottom: 8px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 0;
+                overflow: hidden;
+            }
+            
+            .message-user .message-content,
+            .message-ai .message-content,
+            .routing-info {
+                max-width: 95%;
+            }
+            
+            .input-area {
+                padding: 16px;
+            }
+        }
+
+        /* 代码块样式 */
+        pre {
+            background: #f6f8fa;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border: 1px solid #e1e5e9;
+        }
+
+        code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            color: #1f2328;
+            border: 1px solid #e1e5e9;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="app-title">Smart Router</div>
+                
+                <div class="nav-menu">
+                    <a href="/" class="nav-link active">
+                        <i class="fas fa-comments"></i>
+                        聊天
+                    </a>
+                    <a href="/models" class="nav-link">
+                        <i class="fas fa-cogs"></i>
+                        模型池
+                    </a>
+                </div>
+                
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <i class="fas fa-plus"></i>
+                    <span>新对话</span>
+                </button>
+            </div>
+            <div class="conversations-list" id="conversationsList">
+                <!-- 对话列表动态加载 -->
+            </div>
+        </div>
+
+        <!-- 主聊天区域 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-title">Smart Router Chat</div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-robot"></i>
+                    <h3>欢迎使用 Smart Router</h3>
+                    <p>智能路由系统，为您选择最适合的AI模型</p>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                        id="messageInput" 
+                        class="message-input" 
+                        placeholder="输入您的问题..."
+                        rows="1"
+                        onkeydown="handleKeyDown(event)"
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentConversationId = null;
+        let conversations = [];
+        let isLoading = false;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConversations();
+            adjustTextareaHeight();
+            
+            // 自动调整输入框高度
+            const input = document.getElementById('messageInput');
+            input.addEventListener('input', adjustTextareaHeight);
+        });
+
+        // 调整输入框高度
+        function adjustTextareaHeight() {
+            const textarea = document.getElementById('messageInput');
+            textarea.style.height = 'auto';
+            const newHeight = Math.min(textarea.scrollHeight, 120); 
+            textarea.style.height = newHeight + 'px';
+        }
+
+        // 处理键盘事件
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 加载对话列表
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                const data = await response.json();
+                
+                if (data.success) {
+                    conversations = data.conversations;
+                    renderConversations();
+                }
+            } catch (error) {
+                console.error('加载对话失败:', error);
+            }
+        }
+
+        // 渲染对话列表
+        function renderConversations() {
+            const container = document.getElementById('conversationsList');
+            
+            if (conversations.length === 0) {
+                container.innerHTML = '<div style="padding: 16px; text-align: center; color: #888;">暂无对话</div>';
+                return;
+            }
+            
+            container.innerHTML = conversations.map(conv => `
+                <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}" 
+                     onclick="loadConversation('${conv.id}')">
+                    <div class="conversation-title">${conv.title}</div>
+                    <div class="conversation-time">${formatTime(conv.last_updated)}</div>
+                    <button class="delete-btn" onclick="deleteConversation(event, '${conv.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 格式化时间
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+            
+            return date.toLocaleDateString();
+        }
+
+        // 创建新对话
+        async function createNewChat() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    currentConversationId = data.conversation_id;
+                    clearMessages();
+                    loadConversations(); // 重新加载对话列表
+                }
+            } catch (error) {
+                console.error('创建对话失败:', error);
+            }
+        }
+
+        // 加载特定对话
+        async function loadConversation(convId) {
+            try {
+                const response = await fetch(`/api/conversations/${convId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConversationId = convId;
+                    renderMessages(data.conversation.messages);
+                    renderConversations(); // 更新侧边栏状态
+                }
+            } catch (error) {
+                console.error('加载对话失败:', error);
+            }
+        }
+
+        // 删除对话
+        async function deleteConversation(event, convId) {
+            event.stopPropagation();
+            
+            if (!confirm('确定要删除这个对话吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/conversations/${convId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (currentConversationId === convId) {
+                        currentConversationId = null;
+                        clearMessages();
+                    }
+                    loadConversations();
+                }
+            } catch (error) {
+                console.error('删除对话失败:', error);
+            }
+        }
+
+        // 清空消息显示
+        function clearMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = `
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-robot"></i>
+                    <h3>欢迎使用 Smart Router</h3>
+                    <p>智能模型路由系统，为您选择最适合的AI模型</p>
+                </div>
+            `;
+        }
+
+        // 渲染消息列表
+        function renderMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            
+            if (messages.length === 0) {
+                clearMessages();
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => `
+                <div class="message">
+                    <div class="message-user">
+                        <div class="message-content">${escapeHtml(msg.user_message)}</div>
+                    </div>
+                    <div class="message-ai">
+                        <div class="message-content">${formatMessage(msg.ai_response.response)}</div>
+                        ${renderRoutingInfo(msg.routing_info, msg.processing_time)}
+                    </div>
+                </div>
+            `).join('');
+            
+            scrollToBottom();
+        }
+
+        // 渲染路由信息
+        function renderRoutingInfo(routingInfo, processingTime) {
+            if (!routingInfo) return '';
+            
+            return `
+                <div class="routing-info">
+                    <h4><i class="fas fa-route"></i> 路由信息</h4>
+                    ${routingInfo.selected_model ? `
+                        <div class="routing-detail">
+                            <span>选择模型:</span>
+                            <strong>${routingInfo.selected_model}</strong>
+                        </div>
+                    ` : ''}
+                    ${routingInfo.selected_provider ? `
+                        <div class="routing-detail">
+                            <span>模型提供商:</span>
+                            <strong>${routingInfo.selected_provider}</strong>
+                        </div>
+                    ` : ''}
+                    <div class="routing-detail">
+                        <span>模型类别:</span>
+                        <strong>${routingInfo.selected_category || 'unknown'}</strong>
+                    </div>
+                    ${routingInfo.selected_task_type ? `
+                        <div class="routing-detail">
+                            <span>任务类型:</span>
+                            <strong>${routingInfo.selected_task_type}</strong>
+                        </div>
+                    ` : ''}
+                    <div class="routing-detail">
+                        <span>置信度:</span>
+                        <strong>${(routingInfo.confidence * 100).toFixed(1)}%</strong>
+                    </div>
+                    <div class="routing-detail">
+                        <span>处理时间:</span>
+                        <strong>${processingTime?.toFixed(2)}秒</strong>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isLoading) return;
+            
+            isLoading = true;
+            input.value = '';
+            adjustTextareaHeight();
+            updateSendButton();
+            
+            // 显示用户消息
+            addUserMessage(message);
+            
+            // 显示加载状态
+            const loadingId = addLoadingMessage();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: currentConversationId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // 移除加载状态
+                removeLoadingMessage(loadingId);
+                
+                if (data.success) {
+                    currentConversationId = data.conversation_id;
+                    addAiMessage(data.response, data.routing_info, data.processing_time);
+                    loadConversations(); // 更新对话列表
+                } else {
+                    addAiMessage(`错误: ${data.error}`, null, 0);
+                }
+                
+            } catch (error) {
+                removeLoadingMessage(loadingId);
+                addAiMessage(`网络错误: ${error.message}`, null, 0);
+            } finally {
+                isLoading = false;
+                updateSendButton();
+                input.focus();
+            }
+        }
+
+        // 更新发送按钮状态
+        function updateSendButton() {
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = isLoading;
+            btn.innerHTML = isLoading ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-paper-plane"></i>';
+        }
+
+        // 添加用户消息
+        function addUserMessage(message) {
+            const container = document.getElementById('messagesContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `
+                <div class="message-user">
+                    <div class="message-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 添加AI消息
+        function addAiMessage(response, routingInfo, processingTime) {
+            const container = document.getElementById('messagesContainer');
+            const lastMessage = container.lastElementChild;
+            
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'message-ai';
+            aiDiv.innerHTML = `
+                <div class="message-content">${formatMessage(response)}</div>
+                ${renderRoutingInfo(routingInfo, processingTime)}
+            `;
+            
+            lastMessage.appendChild(aiDiv);
+            scrollToBottom();
+        }
+
+        // 添加加载消息
+        function addLoadingMessage() {
+            const container = document.getElementById('messagesContainer');
+            const loadingDiv = document.createElement('div');
+            const loadingId = 'loading-' + Date.now();
+            
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'message-ai';
+            loadingDiv.innerHTML = `
+                <div class="message-content loading">
+                    <span>AI正在思考中</span>
+                    <div class="loading-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                </div>
+            `;
+            
+            const lastMessage = container.lastElementChild;
+            lastMessage.appendChild(loadingDiv);
+            scrollToBottom();
+            
+            return loadingId;
+        }
+
+        // 移除加载消息
+        function removeLoadingMessage(loadingId) {
+            const loadingDiv = document.getElementById(loadingId);
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 格式化消息（支持简单的markdown）
+        function formatMessage(text) {
+            if (!text) return '';
+            
+            // 转义HTML
+            text = escapeHtml(text);
+            
+            // 代码块
+            text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            
+            // 行内代码
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // 换行
+            text = text.replace(/\n/g, '<br>');
+            
+            return text;
+        }
+    </script>
+</body>
+</html>

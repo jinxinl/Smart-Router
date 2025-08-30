@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Router - 模型池管理</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #fafafa;
+            color: #1f2328;
+            line-height: 1.5;
+        }
+
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2328;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .nav-links a {
+            color: #0969da;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            background-color: #f6f8fa;
+            color: #0969da;
+        }
+
+        .nav-links a.active {
+            background-color: #0969da;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0969da;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #656d76;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .models-section {
+            margin-bottom: 40px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e1e5e9;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2328;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-large {
+            background-color: #ff6b6b20;
+            color: #c92a2a;
+        }
+
+        .category-medium {
+            background-color: #ffa50020;
+            color: #d9730d;
+        }
+
+        .category-small {
+            background-color: #51cf6620;
+            color: #2f9e44;
+        }
+
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 16px;
+        }
+
+        .model-card {
+            background: #ffffff;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .model-card:hover {
+            border-color: #0969da;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .model-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2328;
+            margin-bottom: 4px;
+        }
+
+        .model-provider {
+            font-size: 12px;
+            color: #656d76;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+
+        .status-available {
+            background-color: #2da44e;
+            box-shadow: 0 0 0 2px #2da44e20;
+        }
+
+        .status-unavailable {
+            background-color: #cf222e;
+            box-shadow: 0 0 0 2px #cf222e20;
+        }
+
+        .model-details {
+            margin-top: 16px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #656d76;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #1f2328;
+            font-weight: 500;
+        }
+
+        .capabilities {
+            margin-top: 16px;
+        }
+
+        .capabilities-label {
+            font-size: 12px;
+            color: #656d76;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .capability-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .capability-tag {
+            background-color: #f6f8fa;
+            color: #1f2328;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            border: 1px solid #e1e5e9;
+        }
+
+        .performance-stats {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e1e5e9;
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .performance-item {
+            text-align: center;
+        }
+
+        .performance-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0969da;
+            margin-bottom: 2px;
+        }
+
+        .performance-label {
+            font-size: 10px;
+            color: #656d76;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #656d76;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #cf222e;
+            background-color: #fff1f1;
+            border: 1px solid #ffd6d6;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .refresh-btn {
+            background: #0969da;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #0550ae;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .models-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .nav-links {
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>Smart Router - 模型池管理</h1>
+            <nav class="nav-links">
+                <a href="/">💬 聊天界面</a>
+                <a href="/models" class="active">🤖 模型池</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-models">-</div>
+                <div class="stat-label">总模型数量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="available-models">-</div>
+                <div class="stat-label">可用模型数量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-tasks">-</div>
+                <div class="stat-label">支持任务类型</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-conversations">-</div>
+                <div class="stat-label">历史对话数量</div>
+            </div>
+        </div>
+
+        <!-- 大模型 -->
+        <div class="models-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="category-badge category-large">Large</span>
+                    大型模型
+                </div>
+                <button class="refresh-btn" onclick="loadModelData()">🔄 刷新</button>
+            </div>
+            <div class="models-grid" id="large-models">
+                <div class="loading">正在加载模型信息...</div>
+            </div>
+        </div>
+
+        <!-- 中等模型 -->
+        <div class="models-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="category-badge category-medium">Medium</span>
+                    中型模型
+                </div>
+            </div>
+            <div class="models-grid" id="medium-models">
+                <div class="loading">正在加载模型信息...</div>
+            </div>
+        </div>
+
+        <!-- 小模型 -->
+        <div class="models-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="category-badge category-small">Small</span>
+                    小型专用模型
+                </div>
+            </div>
+            <div class="models-grid" id="small-models">
+                <div class="loading">正在加载模型信息...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加载模型数据
+        async function loadModelData() {
+            try {
+                // 显示加载状态
+                document.querySelectorAll('.models-grid').forEach(grid => {
+                    grid.innerHTML = '<div class="loading">正在加载模型信息...</div>';
+                });
+
+                const response = await fetch('/api/system/status');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateStats(data.system_status);
+                    // 使用 all_models 如果可用，否则使用 available_models
+                    const models = data.system_status.all_models || data.system_status.available_models;
+                    renderModels(models);
+                } else {
+                    showError('加载失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('加载模型数据失败:', error);
+                showError('网络错误，请稍后重试');
+            }
+        }
+
+        // 更新统计信息
+        function updateStats(systemStatus) {
+            const allModels = systemStatus.all_models || systemStatus.available_models;
+            const totalModels = allModels.length;
+            const availableModels = allModels.filter(m => m.available !== false).length;
+            const totalTasks = systemStatus.available_task_types.length;
+            const totalConversations = systemStatus.total_conversations;
+
+            document.getElementById('total-models').textContent = totalModels;
+            document.getElementById('available-models').textContent = availableModels;
+            document.getElementById('total-tasks').textContent = totalTasks;
+            document.getElementById('total-conversations').textContent = totalConversations;
+        }
+
+        // 渲染模型卡片
+        function renderModels(models) {
+            const categories = {
+                large: document.getElementById('large-models'),
+                medium: document.getElementById('medium-models'),
+                small: document.getElementById('small-models')
+            };
+
+            // 清空所有分类
+            Object.values(categories).forEach(container => {
+                container.innerHTML = '';
+            });
+
+            // 按分类分组模型
+            const modelsByCategory = {
+                large: models.filter(m => m.category === 'large'),
+                medium: models.filter(m => m.category === 'medium'),
+                small: models.filter(m => m.category === 'small')
+            };
+
+            // 渲染每个分类的模型
+            Object.entries(modelsByCategory).forEach(([category, categoryModels]) => {
+                const container = categories[category];
+                
+                if (categoryModels.length === 0) {
+                    container.innerHTML = '<div class="loading">该分类暂无模型</div>';
+                    return;
+                }
+
+                container.innerHTML = categoryModels.map(model => createModelCard(model)).join('');
+            });
+        }
+
+        // 创建模型卡片HTML
+        function createModelCard(model) {
+            // 格式化数据
+            const formatTokens = (tokens) => {
+                if (tokens >= 1000000) return (tokens / 1000000).toFixed(1) + 'M';
+                if (tokens >= 1000) return (tokens / 1000).toFixed(0) + 'K';
+                return tokens.toString();
+            };
+
+            const formatLatency = (latencyClass) => {
+                const latencyMap = {
+                    'very_fast': '极快',
+                    'fast': '快速',
+                    'medium': '中等',
+                    'slow': '较慢',
+                    'very_slow': '很慢'
+                };
+                return latencyMap[latencyClass] || latencyClass;
+            };
+
+            const formatCost = (costPerToken) => {
+                if (costPerToken === 0) return '免费';
+                if (costPerToken < 0.01) return '低';
+                if (costPerToken < 0.05) return '中等';
+                return '高';
+            };
+
+            // 根据提供商和模型类型推断能力标签
+            const getCapabilities = (model) => {
+                const caps = [];
+                if (model.category === 'large') {
+                    caps.push('推理', '编程', '分析', '创意');
+                } else if (model.category === 'medium') {
+                    caps.push('问答', '总结', '快速响应');
+                } else {
+                    if (model.name.includes('codegen')) caps.push('代码生成');
+                    if (model.name.includes('sentiment')) caps.push('情感分析');
+                    if (model.name.includes('roberta') || model.name.includes('squad')) caps.push('问答');
+                    if (model.name.includes('MiniLM') || model.name.includes('embedding')) caps.push('文本嵌入');
+                    if (caps.length === 0) caps.push('专业任务');
+                }
+                return caps;
+            };
+
+            const capabilities = getCapabilities(model);
+            const statusClass = model.available ? 'status-available' : 'status-unavailable';
+            const performance = model.performance || {};
+
+            return `
+                <div class="model-card">
+                    <div class="model-header">
+                        <div>
+                            <div class="model-name">${model.name}</div>
+                            <div class="model-provider">${model.provider}</div>
+                        </div>
+                        <div class="status-indicator ${statusClass}"></div>
+                    </div>
+
+                    <div class="model-details">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">最大tokens</div>
+                                <div class="detail-value">${formatTokens(model.max_tokens || 0)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">响应速度</div>
+                                <div class="detail-value">${formatLatency(model.latency_class)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">成本</div>
+                                <div class="detail-value">${formatCost(model.cost_per_token)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">状态</div>
+                                <div class="detail-value">${model.available ? '可用' : '不可用'}</div>
+                            </div>
+                        </div>
+
+                        <div class="capabilities">
+                            <div class="capabilities-label">能力标签</div>
+                            <div class="capability-tags">
+                                ${capabilities.map(cap => 
+                                    `<span class="capability-tag">${cap}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+
+                        <div class="performance-stats">
+                            <div class="performance-grid">
+                                <div class="performance-item">
+                                    <div class="performance-value">${performance.total_requests || 0}</div>
+                                    <div class="performance-label">总请求</div>
+                                </div>
+                                <div class="performance-item">
+                                    <div class="performance-value">${(performance.average_latency || 0).toFixed(2)}s</div>
+                                    <div class="performance-label">平均延迟</div>
+                                </div>
+                                <div class="performance-item">
+                                    <div class="performance-value">${((1 - (performance.error_rate || 0)) * 100).toFixed(1)}%</div>
+                                    <div class="performance-label">成功率</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            document.querySelectorAll('.models-grid').forEach(grid => {
+                grid.innerHTML = `<div class="error">${message}</div>`;
+            });
+        }
+
+        // 页面加载时获取数据
+        document.addEventListener('DOMContentLoaded', loadModelData);
+    </script>
+</body>
+</html>
